@@ -4,7 +4,9 @@
 	"main": "lib/sharp.js",
 	"dependencies": {
 		"loader-utils": "^0.2.11",
-		"bluebird": "^2.10.0"
+		"bluebird": "^2.10.0",
+		"lodash": "^3.10.1",
+		"option-multiplexer": "^0.1.0"
 	},
 	"peerDependencies": {
 		"sharp": "^0.11.0"
