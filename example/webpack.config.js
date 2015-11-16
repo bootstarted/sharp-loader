@@ -7,12 +7,12 @@ module.exports = {
   target: 'web',
   output: {
     filename: '[name].js',
-    path: path.join(__dirname, '..', 'build'),
+    path: path.join(__dirname, 'build'),
     chunkFilename: '[id].[chunkhash].js'
   },
   module: {
     loaders: [{
-      test: /\.(gif|jpe?g|png|tiff)(\?.*)?$/,
+      test: /\.(gif|jpe?g|png|svg|tiff)(\?.*)?$/,
       loader: path.join(__dirname, '..'),
       query: {
         name: '[name].[hash:8].[ext]',
