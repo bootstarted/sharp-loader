@@ -1,14 +1,15 @@
 {
-	"name": "sharp-loader",
-	"version": "0.1.2",
-	"main": "lib/sharp.js",
-	"dependencies": {
-		"loader-utils": "^0.2.11",
-		"bluebird": "^2.10.0",
-		"lodash": "^3.10.1",
-		"option-multiplexer": "^0.1.0"
-	},
-	"peerDependencies": {
-		"sharp": "^0.11.0"
-	}
+  "name": "sharp-loader",
+  "version": "0.1.2",
+  "main": "lib/sharp.js",
+  "dependencies": {
+    "bluebird": "^2.10.0",
+    "loader-utils": "^0.2.11",
+    "lodash": "^3.10.1",
+    "mime": "^1.3.4",
+    "option-multiplexer": "^0.1.0"
+  },
+  "peerDependencies": {
+    "sharp": "^0.11.4"
+  }
 }

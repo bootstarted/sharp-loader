@@ -13,7 +13,7 @@ module.exports = {
 	module: {
 		loaders: [{
 			test: /\.(gif|jpe?g|png|tiff)(\?.*)?$/,
-			loader: 'sharp-loader',
+			loader: path.join(__dirname, '..'),
 			query: {
 				name: '[name].[hash:8].[ext]',
 				presets: {
