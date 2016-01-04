@@ -4,45 +4,46 @@ Use [sharp] to automatically generate image assets with [webpack].
 
 ## Usage
 
+IMPORTANT: You need to have vips installed for [sharp] to work. The sharp npm module may attempt to do this for you, it may not.
+
 ```sh
 npm install --save sharp-loader sharp
 ```
 
-
+NOTE: If your configuration generates a single image (that is no configuration properties are arrays) then the result will be a single image; if your configuration generates multiple images then the result will be an array.
 
 Setup presets in your loader:
 
 ```javascript
 {
-	module: {
-		loaders: [{
-			test: /\.(gif|jpe?g|png|svg|tiff)(\?.*)?$/,
-			loader: 'sharp-loader',
-			query: {
-				name: '[name].[hash:8].[ext]',
-				presets: {
-					// Preset 1
-					thumbnail: {
-						format: [ 'webp', 'png', 'jpeg' ],
-						density: [ 1, 2, 3 ],
-						size: 200,
-						quality: 60
-					},
-					// Preset 2
-					prefetch: {
-						format: 'jpeg',
-						mode: 'cover',
-						blur: 100,
-						quality: 30,
-						inline: true,
-						size: 50
-					}
-				}
-			}
-		}]
-	}
+  module: {
+    loaders: [{
+      test: /\.(gif|jpe?g|png|svg|tiff)(\?.*)?$/,
+      loader: 'sharp-loader',
+      query: {
+        name: '[name].[hash:8].[ext]',
+        presets: {
+          // Preset 1
+          thumbnail: {
+            format: [ 'webp', 'png', 'jpeg' ],
+            density: [ 1, 2, 3 ],
+            size: 200,
+            quality: 60
+          },
+          // Preset 2
+          prefetch: {
+            format: 'jpeg',
+            mode: 'cover',
+            blur: 100,
+            quality: 30,
+            inline: true,
+            size: 50
+          }
+        }
+      }
+    }]
+  }
 };
-
 ```
 
 Use without presets generating a single image:
