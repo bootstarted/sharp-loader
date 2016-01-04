@@ -10,6 +10,6 @@
     "option-multiplexer": "^0.1.0"
   },
   "peerDependencies": {
-    "sharp": "^0.11.4"
+    "sharp": ">=0.12.0"
   }
 }
