@@ -2,6 +2,12 @@
 
 Use [sharp] to automatically generate image assets with [webpack].
 
+![build status](http://img.shields.io/travis/izaakschroeder/sharp-loader/master.svg?style=flat)
+![coverage](http://img.shields.io/coveralls/izaakschroeder/sharp-loader/master.svg?style=flat)
+![license](http://img.shields.io/npm/l/sharp-loader.svg?style=flat)
+![version](http://img.shields.io/npm/v/sharp-loader.svg?style=flat)
+![downloads](http://img.shields.io/npm/dm/sharp-loader.svg?style=flat)
+
 ## Usage
 
 IMPORTANT: You need to have vips installed for [sharp] to work. The sharp npm module may attempt to do this for you, it may not.
