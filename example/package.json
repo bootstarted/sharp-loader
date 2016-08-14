@@ -1,7 +1,8 @@
 {
   "name": "sharp-loader-example",
   "dependencies": {
-    "webpack": "^1.12.1",
-    "sharp-loader": "^0.1.0"
+    "sharp": "^0.15.1",
+    "sharp-loader": "../",
+    "webpack": "^1.12.1"
   }
 }
