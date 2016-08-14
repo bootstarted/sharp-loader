@@ -1,13 +1,38 @@
 {
   "name": "sharp-loader",
   "version": "0.3.0",
-  "main": "lib/sharp.js",
+  "license": "CC0-1.0",
+  "repository": "izaakschroeder/sharp-loader",
+  "main": "dist/sharp.js",
   "dependencies": {
     "bluebird": "^2.10.0",
     "loader-utils": "^0.2.11",
     "lodash": "^4.15.0",
     "mime": "^1.3.4",
     "option-multiplexer": "^0.1.0"
+  },
+  "scripts": {
+    "prepublish": "./node_modules/.bin/babel -s inline -d ./dist ./src --source-maps true",
+    "test": "npm run lint && npm run spec",
+    "lint": "eslint .",
+    "spec": "NODE_ENV=test ./node_modules/.bin/_mocha -r adana-dump --compilers js:babel-core/register -R spec --recursive test/spec/**/*.spec.js"
+  },
+  "devDependencies": {
+    "adana-cli": "^0.1.1",
+    "adana-dump": "^0.1.0",
+    "adana-format-lcov": "^0.1.1",
+    "babel-cli": "^6.7.7",
+    "babel-core": "^6.7.7",
+    "babel-preset-metalab": "^0.2.1",
+    "chai": "^3.5.0",
+    "eslint": "^2.8.0",
+    "eslint-config-metalab": "^3.1.0",
+    "eslint-plugin-filenames": "^0.2.0",
+    "eslint-plugin-import": "^1.6.0",
+    "eslint-plugin-react": "^4.2.3",
+    "memory-fs": "^0.3.0",
+    "mocha": "^2.4.5",
+    "webpack": "^1.13.0"
   },
   "peerDependencies": {
     "sharp": ">=0.12.0"

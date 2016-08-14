@@ -7,7 +7,7 @@ module.exports = {
   target: 'web',
   output: {
     filename: '[name].js',
-    path: path.join(__dirname, 'build'),
+    path: path.join(__dirname, 'dist'),
     chunkFilename: '[id].[chunkhash].js'
   },
   module: {
