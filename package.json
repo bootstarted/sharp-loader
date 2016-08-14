@@ -1,6 +1,6 @@
 {
   "name": "sharp-loader",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "main": "lib/sharp.js",
   "dependencies": {
     "bluebird": "^2.10.0",
