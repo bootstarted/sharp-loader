@@ -1,4 +1,4 @@
 node_modules
+examples
 *.log
-dist
 coverage

@@ -1,10 +1,8 @@
-
-var _ = require('lodash');
-var sharp = require('sharp');
-var loaderUtils = require('loader-utils');
-var multiplex = require('option-multiplexer');
-var mime = require('mime');
-var Promise = require('bluebird');
+import _ from 'lodash';
+import sharp from 'sharp';
+import loaderUtils from 'loader-utils';
+import multiplex from 'option-multiplexer';
+import mime from 'mime';
 
 /**
  * Perform a sequence of transformations on an image.
@@ -12,8 +10,7 @@ var Promise = require('bluebird');
  * @param {Object} options Transformations to apply.
  * @returns {Object} Resulting sharp object.
  */
-function transform(image, options) {
-  options = options || { };
+const transform = (image, options = {}) => {
   return [
     'blur',
     'quality',
@@ -22,30 +19,29 @@ function transform(image, options) {
     'max',
     'min',
     'crop',
-    'toFormat'
+    'toFormat',
   ].reduce(function(image, key) {
     if (key in options) {
-      var value = options[key];
+      let value = options[key];
       value = Array.isArray(value) ? value : [value];
       return image[key].apply(image, value);
-    } else {
-      return image;
     }
+    return image;
   }, image.clone().flatten());
-}
+};
 
 /**
  * Generate the appropriate extension for a `sharp` format.
  * @param  {String} type `sharp` type.
  * @returns {String} Extension.
  */
-function extension(type) {
+const extension = (type) => {
   return {
-    'webp': '.webp',
-    'jpeg': '.jpg',
-    'png': '.png'
+    webp: '.webp',
+    jpeg: '.jpg',
+    png: '.png',
   }[type];
-}
+};
 
 /**
  * Take some configuration options and transform them into a format that
@@ -53,8 +49,8 @@ function extension(type) {
  * @param {Object} options Generic configuration options.
  * @returns {Object} `transform` compatible options.
  */
-function normalize(options) {
-  var result = { };
+const normalize = (options) => {
+  const result = { };
   if (options.format) {
     result.toFormat = options.format;
   }
@@ -64,7 +60,7 @@ function normalize(options) {
 
   // Sizing
   if (options.width || options.height) {
-    result.resize = [ options.width, options.height ];
+    result.resize = [options.width, options.height];
   }
 
   if (result.resize) {
@@ -75,13 +71,13 @@ function normalize(options) {
 
   // Multiplicative density
   if (options.density) {
-    var density = Number(options.density);
+    const density = Number(options.density);
     result.resize[0] *= density;
     result.resize[1] *= density;
   }
 
   // Mimic background-size
-  switch(options.mode) {
+  switch (options.mode) {
   case 'cover':
     result.min = true;
     break;
@@ -99,39 +95,27 @@ function normalize(options) {
 
   result.inline = !!options.inline;
   return result;
-}
+};
 
-function getPresets(localQuery, globalQuery) {
-  if (!globalQuery.presets) {
-    throw new Error('No presets defined.');
-  } else if (!localQuery.presets) {
-    throw new Error('No presets selected.');
-  }
-  return _.pick(globalQuery.presets, localQuery.presets);
-}
+const emit = (context) => {
+  const publicPath = context.options.output.publicPath || '/';
+  const query = loaderUtils.parseQuery(context.query);
+  const template = query.name;
 
-
-
-function emit(context) {
-  var publicPath = context.options.output.publicPath || '/';
-  var query = loaderUtils.parseQuery(context.query);
-  var template = query.name;
-
-  function name(image, info, options, preset) {
-
+  const name = (image, info) => {
     return loaderUtils.interpolateName({
       resourcePath: context.resourcePath
-        .replace(/\.[^.]+$/, extension(info.format))
+        .replace(/\.[^.]+$/, extension(info.format)),
     }, template, {
       context: query.context || context.options.context,
-      content: image
+      content: image,
     });
-  }
+  };
 
-  function data(image, info, options, preset) {
-    var n = name(image, info, options, preset);
-    var format = mime.lookup(n);
-    var extra = {format: format};
+  const data = (image, info, options, preset) => {
+    const n = name(image, info, options, preset);
+    const format = mime.lookup(n);
+    const extra = {format: format};
     if (preset) {
       extra.preset = preset;
     }
@@ -142,19 +126,20 @@ function emit(context) {
           'data:',
           format,
           ';base64,',
-          image.toString('base64')
-        ].join('')
-      }, options, info, extra);
-    } else {
-      context.emitFile(n, image);
-      return _.assign({
-        url: publicPath + n
+          image.toString('base64'),
+        ].join(''),
       }, options, info, extra);
     }
-  }
+    context.emitFile(n, image);
+    return _.assign({
+      url: publicPath + n,
+    }, options, info, extra);
+  };
 
-  return function(result) {
-    var image = result.image, options = result.options, preset = result.preset;
+  return (result) => {
+    const image = result.image;
+    const options = result.options;
+    const preset = result.preset;
 
     // We have to use the callback form in order to get access to the info
     // object unfortunately.
@@ -165,54 +150,55 @@ function emit(context) {
         } else {
           resolve(data(buffer, info, options, preset));
         }
-      })
+      });
     });
-  }
-}
+  };
+};
 
-function handle(image, preset, name, presets, emit) {
-  function wahoo(options) {
-    return Promise.props({
+const handle = (image, preset, name, presets, emit) => {
+  const wahoo = (options) => {
+    return emit({
       preset: name,
-      options: options,
-      image: transform(image, normalize(options))
-    }).then(emit);
-  }
+      options,
+      image: transform(image, normalize(options)),
+    });
+  };
   if (name && !presets[name]) {
-    return [Promise.reject('No such preset: ' + preset)];
+    return [Promise.reject(`No such preset: ${preset}`)];
   }
-  var values = multiplex(_.assign({ }, presets[name] || {}, preset));
+  const values = multiplex(_.assign({ }, presets[name] || {}, preset));
   return _.map(values, wahoo);
-}
+};
 
-function lolol(image, extra, presets, globals, emit) {
+const lolol = (image, extra, presets, globals, emit) => {
   if (_.isArray(presets)) {
-    return Promise.all(_.flatMap(presets, function (name) {
+    return Promise.all(_.flatMap(presets, (name) => {
       return handle(image, extra, name, globals, emit);
     }));
   } else if (_.isObject(presets)) {
-    return Promise.all(_.flatMap(_.toPairs(presets), function([name, preset]) {
+    return Promise.all(_.flatMap(_.toPairs(presets), ([name, preset]) => {
       return handle(image, _.assign({}, preset, extra), name, globals, emit);
     }));
   } else if (_.isString(presets)) {
     return Promise.all(handle(image, extra, presets, globals, emit));
   }
   throw new TypeError();
-}
+};
 
+/* eslint import/no-commonjs: 0 */
+/* global module */
 module.exports = function(input) {
   // This means that, for a given query string, the loader will only be
   // run once. No point in barfing out the same image over and over.
   this.cacheable();
 
-  var localQuery = loaderUtils.parseQuery(this.resourceQuery);
-  var globalQuery = loaderUtils.parseQuery(this.query);
-  var extra = _.omit(localQuery, ['preset', 'presets']);
-  var assets;
-  var image = sharp(input);
-  var meta = image.metadata();
-  var callback = this.async();
-  var e = emit(this);
+  const localQuery = loaderUtils.parseQuery(this.resourceQuery);
+  const globalQuery = loaderUtils.parseQuery(this.query);
+  const extra = _.omit(localQuery, ['preset', 'presets']);
+  let assets;
+  const image = sharp(input);
+  const callback = this.async();
+  const e = emit(this);
 
   // We have three possible choices:
   // - set of presets in `presets`
@@ -223,12 +209,14 @@ module.exports = function(input) {
   } else if (localQuery.preset) {
     assets = lolol(image, extra, localQuery.preset, globalQuery.presets, e);
   } else {
-    assets = Promise.all(handle(image, localQuery, null, globalQuery.presets, e));
+    assets = Promise.all(
+      handle(image, localQuery, null, globalQuery.presets, e)
+    );
   }
 
   assets.then(function(assets) {
-    return 'module.exports = ' + JSON.stringify(assets) + ';';
-  }).nodeify(callback);
+    return `module.exports = ${JSON.stringify(assets)};`;
+  }).then((result) => callback(null, result), callback);
 };
 
 // Force buffers since sharp doesn't want strings.
