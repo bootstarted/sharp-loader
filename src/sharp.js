@@ -3,7 +3,6 @@ import sharp from 'sharp';
 import loaderUtils from 'loader-utils';
 import multiplex from 'option-multiplexer';
 import mime from 'mime';
-import Promise from 'bluebird';
 
 /**
  * Perform a sequence of transformations on an image.
@@ -158,11 +157,11 @@ const emit = (context) => {
 
 const handle = (image, preset, name, presets, emit) => {
   const wahoo = (options) => {
-    return Promise.props({
+    return emit({
       preset: name,
-      options: options,
+      options,
       image: transform(image, normalize(options)),
-    }).then(emit);
+    });
   };
   if (name && !presets[name]) {
     return [Promise.reject(`No such preset: ${preset}`)];
@@ -217,7 +216,7 @@ module.exports = function(input) {
 
   assets.then(function(assets) {
     return `module.exports = ${JSON.stringify(assets)};`;
-  }).nodeify(callback);
+  }).then((result) => callback(null, result), callback);
 };
 
 // Force buffers since sharp doesn't want strings.
