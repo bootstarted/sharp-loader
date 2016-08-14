@@ -20,8 +20,9 @@ module.exports = {
           thumbnail: {
             format: [ 'webp', 'png', 'jpeg' ],
             density: [ 1, 2, 3 ],
-            size: 200,
-            quality: 60
+            width: 200,
+            height: 200,
+            quality: 60,
           },
           prefetch: {
             format: 'jpeg',
@@ -29,7 +30,8 @@ module.exports = {
             blur: 100,
             quality: 30,
             inline: true,
-            size: 50
+            width: 50,
+            height: 50,
           }
         }
       }
