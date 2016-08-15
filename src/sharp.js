@@ -185,6 +185,11 @@ const lolol = (image, extra, presets, globals, emit) => {
   throw new TypeError();
 };
 
+const shouldEmit = (a, b) => {
+  const thing = {...a, ...b};
+  return typeof thing.emit === 'undefined' || thing.emit;
+};
+
 /* eslint import/no-commonjs: 0 */
 /* global module */
 module.exports = function(input) {
@@ -194,11 +199,12 @@ module.exports = function(input) {
 
   const localQuery = loaderUtils.parseQuery(this.resourceQuery);
   const globalQuery = loaderUtils.parseQuery(this.query);
-  const extra = _.omit(localQuery, ['preset', 'presets']);
+  const extra = _.omit(localQuery, ['preset', 'presets', 'emit']);
   let assets;
   const image = sharp(input);
   const callback = this.async();
-  const e = emit(this);
+  const e = shouldEmit(globalQuery, localQuery) ?
+    emit(this) : () => Promise.resolve();
 
   // We have three possible choices:
   // - set of presets in `presets`

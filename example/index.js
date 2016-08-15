@@ -5,5 +5,6 @@ var c = require('./img/ew3W8.jpg?{"presets":{"thumbnail":{"width": 400}}}');
 var d = require('./img/visa.svg?height=100&format=png');
 var e = require('./img/ew3W8.jpg?preset=thumbnail');
 var f = require('./img/ew3W8.jpg?preset=thumbnail&width=60');
+var g = require('./img/ew3W8.jpg?preset=thumbnail&height=300&emit=false');
 
 console.log(a, b, c, d, e, f);
