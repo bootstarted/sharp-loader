@@ -27,7 +27,7 @@ const transform = (image, options = {}) => {
       return image[key].apply(image, value);
     }
     return image;
-  }, image.clone().flatten());
+  }, image.clone());
 };
 
 /**
