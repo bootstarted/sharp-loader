@@ -16,77 +16,142 @@ IMPORTANT: You need to have vips installed for [sharp] to work. The sharp npm mo
 npm install --save sharp-loader sharp
 ```
 
-NOTE: If your configuration generates a single image (that is no configuration properties are arrays) then the result will be a single image; if your configuration generates multiple images then the result will be an array.
+NOTE: If your configuration generates a single image (that is no configuration properties are arrays) then the result will still be an array with a single image.
 
 Setup presets in your loader:
 
 ```javascript
 {
   module: {
-    loaders: [{
-      test: /\.(gif|jpe?g|png|svg|tiff)(\?.*)?$/,
-      loader: 'sharp-loader',
-      query: {
-        name: '[name].[hash:8].[ext]',
-        presets: {
-          // Preset 1
-          thumbnail: {
-            format: [ 'webp', 'png', 'jpeg' ],
-            density: [ 1, 2, 3 ],
-            size: 200,
-            quality: 60
+    loaders: [
+      {
+        test: /\.(gif|jpe?g|png|svg|tiff)(\?.*)?$/,
+        loader: 'sharp-loader',
+        query: {
+          name: '[name].[hash:8].[ext]',
+          presets: {
+            // Preset 1
+            thumbnail: {
+              format: ['webp', 'jpeg'],
+              width: 200,
+              quality: 60,
+            },
+            // Preset 2
+            prefetch: {
+              // Format-specific options can be specified like this:
+              format: {id: 'jpeg', quality: 30},
+              mode: 'cover',
+              blur: 100,
+              inline: true,
+              size: 50,
+            },
           },
-          // Preset 2
-          prefetch: {
-            format: 'jpeg',
-            mode: 'cover',
-            blur: 100,
-            quality: 30,
-            inline: true,
-            size: 50
-          }
-        }
-      }
-    }]
+        },
+      },
+    ];
   }
-};
+}
 ```
 
 Use without presets generating a single image:
 
 ```javascript
-const images = require('./aQHsOG6.jpg?width=500');
-console.log(images.format); // 'image/jpeg'
-console.log(images.url) // url to image
+const images = require('./aQHsOG6.jpg?{"outputs":[{"width": 500}]}');
+console.log(images[0].format); // 'image/jpeg'
+console.log(images[0].url); // url to image
 ```
-
 
 Use single preset generating multiple images:
 
 ```javascript
-const images = require('./aQHsOG6.jpg?preset=thumbnail');
-console.log(images.length); // 1
-console.log(images[0].url) // url to image
+const images = require('./aQHsOG6.jpg?{"outputs":["thumbnail"]}');
+console.log(images[0].url); // url to first image
+console.log(images[1].url); // url to second image
 ```
 
 Use multiple presets generating multiple images:
 
 ```javascript
-const images = require('./aQHsOG6.jpg?presets[]=thumbnail&presets[]=prefetch');
-console.log(Object.keys(images).length); // 2
-console.log(images.prefetch.format) // image/jpeg
-console.log(images.thumbnail.length) // 2
+const images = require('./aQHsOG6.jpg?{"outputs":["thumbnail", "prefetch"]}');
+console.log(images);
 ```
 
-Altering preset behavior:
+Modify the value in a preset:
 
 ```javascript
-const images = require('./aQHsOG6.jpg?{"presets": { "thumbnail": { "size": 400 } }}');
-console.log(Object.keys(images).length); // 1
-console.log(images.prefetch.format) // image/jpeg
-console.log(images.thumbnail.length) // 2
+const images = require('./aQHsOG6.jpg?{"outputs":[{"preset": "thumbnail", "width": 600}]}');
+console.log(images);
 ```
 
+### Server-Side Rendering
+
+You can disable emitting the image files with:
+
+```js
+{
+  emitFile: false
+}
+```
+
+You can also avoid any processing and just emit the expected metadata:
+
+```js
+{
+  emitFile: 'synthetic'
+}
+```
+
+
+### Complex Example
+
+```js
+{
+  presets: {
+    default: {
+      name: (meta) => {
+        // If a scaled image is given, include scale in output name
+        if (meta.scale) {
+          return '[name]@[scale]x.[hash:8].[ext]';
+        }
+        return '[name].[hash:8].[ext]';
+      },
+      format: (meta) => {
+        // If the image is transparent, convert to webp and png,
+        // otherwise just use jpg.
+        if (meta.hasAlpha) {
+          return ['webp', 'png'];
+        }
+        return ['webp', {id: 'jpeg', quality: 70}];
+      },
+      scale: (meta) => {
+        // If the image has no intrinsic scaling just ignore it.
+        if (!meta.scale) {
+          return undefined;
+        }
+        // Downscale and provide 1x, 2x, 3x, 4x.
+        return [1, 2, 3, 4].filter((x) => {
+          return x <= meta.scale;
+        });
+      },
+    },
+    preview: {
+      name: '[name]-preview.[hash:8].[ext]',
+      format: (meta) => {
+        if (meta.hasAlpha) {
+          return 'png';
+        }
+        return {id: 'jpeg', quality: 40};
+      },
+      blur: 100,
+      inline: true,
+      scale: ({width, height}) => {
+        // Make a really tiny image.
+        return Math.min(50 / width, 50 / height);
+      },
+    },
+  },
+}
+```
 
 [sharp]: https://github.com/lovell/sharp
 [webpack]: https://github.com/webpack/webpack
