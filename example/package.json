@@ -1,8 +1,14 @@
 {
   "name": "sharp-loader-example",
+  "scripts": {
+    "build": "webpack",
+    "dev": "webpack-dev-server -d --progress"
+  },
   "dependencies": {
-    "sharp": "^0.15.1",
+    "file-loader": "^1.1.7",
+    "sharp": "^0.19.0",
     "sharp-loader": "../",
-    "webpack": "^1.12.1"
+    "webpack": "^3.0.0",
+    "webpack-dev-server": "^2.11.1"
   }
 }
