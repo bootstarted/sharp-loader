@@ -2,8 +2,8 @@
 
 Use [sharp] to automatically generate image assets with [webpack].
 
-![build status](http://img.shields.io/travis/izaakschroeder/sharp-loader/master.svg?style=flat)
-![coverage](http://img.shields.io/coveralls/izaakschroeder/sharp-loader/master.svg?style=flat)
+![build status](http://img.shields.io/travis/metalabdesign/sharp-loader/master.svg?style=flat)
+![coverage](https://img.shields.io/codecov/c/github/metalabdesign/sharp-loader/master.svg?style=flat)
 ![license](http://img.shields.io/npm/l/sharp-loader.svg?style=flat)
 ![version](http://img.shields.io/npm/v/sharp-loader.svg?style=flat)
 ![downloads](http://img.shields.io/npm/dm/sharp-loader.svg?style=flat)
