@@ -147,7 +147,14 @@ const createImageOptions = (
       config[key] = base[key];
     }
   });
-  return multiplex(config);
+  const out = multiplex(config);
+  out.forEach((item) => {
+    // NOTE: Can copy any non-multiplexed values here.
+    if (typeof outputOptions.preset === 'string') {
+      item.preset = outputOptions.preset;
+    }
+  });
+  return out;
 };
 
 const toArray = (x, defaultValue) => {
