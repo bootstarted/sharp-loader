@@ -1,5 +1,6 @@
-{
-  "extends": [
-    "metalab"
-  ]
-}
+extends:
+  - metalab
+env:
+  node: true
+rules:
+  complexity: 0

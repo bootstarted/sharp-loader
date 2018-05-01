@@ -1,229 +1,259 @@
-import _ from 'lodash';
+// @flow
 import sharp from 'sharp';
 import loaderUtils from 'loader-utils';
-import multiplex from 'option-multiplexer';
-import mime from 'mime';
+import product from 'cartesian-product';
 
-/**
- * Perform a sequence of transformations on an image.
- * @param {Object} image Initial sharp object.
- * @param {Object} options Transformations to apply.
- * @returns {Object} Resulting sharp object.
- */
-const transform = (image, options = {}) => {
-  return [
-    'blur',
-    'quality',
-    'compressionLevel',
-    'resize',
-    'max',
-    'min',
-    'crop',
-    'toFormat',
-  ].reduce(function(image, key) {
-    if (key in options) {
-      let value = options[key];
-      value = Array.isArray(value) ? value : [value];
-      return image[key].apply(image, value);
+import serialize from './internal/serialize';
+import createImageObject from './internal/createImageObject';
+import transformImage from './internal/transformImage';
+import getSyntheticMeta from './internal/getSyntheticMeta';
+
+import type {Image} from 'sharp';
+import type {
+  OutputOptions,
+  GlobalOptions,
+  ImageOptions,
+  ImageObject,
+} from './types';
+
+const allowedImageProperties = [
+  'name',
+  'scale',
+  'blur',
+  'width',
+  'height',
+  'mode',
+  'format',
+  'inline',
+];
+
+const normalizeProperty = (key, value) => {
+  switch (key) {
+    case 'scale':
+    case 'blur':
+    case 'width':
+    case 'height':
+      return parseFloat(value);
+    default:
+      return value;
+  }
+};
+
+const normalizeOutputOptions = (
+  options: OutputOptions,
+  ...args
+): OutputOptions => {
+  const normalize = (key, val) => {
+    if (typeof val === 'function') {
+      return normalize(key, val(...args));
+    } else if (Array.isArray(val)) {
+      if (val.length === 0) {
+        return undefined;
+      }
+      return val.reduce((out, v) => {
+        if (typeof v !== 'undefined') {
+          return [...out, normalizeProperty(key, v)];
+        }
+        return out;
+      }, []);
+    } else if (typeof val !== 'undefined') {
+      return [normalizeProperty(key, val)];
     }
-    return image;
-  }, image.clone());
-};
-
-/**
- * Generate the appropriate extension for a `sharp` format.
- * @param  {String} type `sharp` type.
- * @returns {String} Extension.
- */
-const extension = (type) => {
-  return {
-    webp: '.webp',
-    jpeg: '.jpg',
-    png: '.png',
-  }[type];
-};
-
-/**
- * Take some configuration options and transform them into a format that
- * `transform` is capable of using.
- * @param {Object} options Generic configuration options.
- * @returns {Object} `transform` compatible options.
- */
-const normalize = (options) => {
-  const result = { };
-  if (options.format) {
-    result.toFormat = options.format;
-  }
-  if (options.quality) {
-    result.quality = Number(options.quality);
-  }
-
-  // Sizing
-  if (options.width || options.height) {
-    result.resize = [options.width, options.height];
-  }
-
-  if (result.resize) {
-    result.resize = result.resize.map(function(value) {
-      return value ? Number(value) : null;
-    });
-  }
-
-  // Multiplicative density
-  if (options.density) {
-    const density = Number(options.density);
-    result.resize[0] *= density;
-    result.resize[1] *= density;
-  }
-
-  // Mimic background-size
-  switch (options.mode) {
-  case 'cover':
-    result.min = true;
-    break;
-  case 'contain':
-    result.max = true;
-    break;
-  default:
-    result.crop = sharp.gravity.center;
-    break;
-  }
-
-  if (options.blur) {
-    result.blur = Number(options.blur);
-  }
-
-  result.inline = !!options.inline;
+    return undefined;
+  };
+  const keys = Object.keys(options);
+  const result = {};
+  keys.forEach((key) => {
+    const out = normalize(key, options[key]);
+    if (typeof out !== 'undefined') {
+      result[key] = out;
+    }
+  });
   return result;
 };
 
-const emit = (context) => {
-  const publicPath = context.options.output.publicPath || '/';
-  const query = loaderUtils.parseQuery(context.query);
-  const template = query.name;
-
-  const name = (image, info) => {
-    return loaderUtils.interpolateName({
-      resourcePath: context.resourcePath
-        .replace(/\.[^.]+$/, extension(info.format)),
-    }, template, {
-      context: query.context || context.options.context,
-      content: image,
+const multiplex = (options) => {
+  const keys = Object.keys(options);
+  const values = product(
+    keys.map((key) => {
+      return options[key];
+    }),
+  );
+  return values.map((entries) => {
+    const result = {};
+    keys.forEach((key, i) => {
+      result[key] = entries[i];
     });
-  };
+    return result;
+  });
+};
 
-  const data = (image, info, options, preset) => {
-    const n = name(image, info, options, preset);
-    const format = mime.lookup(n);
-    const extra = {format: format};
-    if (preset) {
-      extra.preset = preset;
-    }
-    if (options.inline) {
-      return _.assign({
-        name: n,
-        url: [
-          'data:',
-          format,
-          ';base64,',
-          image.toString('base64'),
-        ].join(''),
-      }, options, info, extra);
-    }
-    context.emitFile(n, image);
-    return _.assign({
-      url: publicPath + n,
-    }, options, info, extra);
-  };
+const processImage = (
+  input,
+  image: Image,
+  meta,
+  imageOptions: ImageOptions,
+  globalOptions: GlobalOptions,
+  loader,
+): Promise<ImageObject> => {
+  if (globalOptions.emitFile === 'synthetic' && imageOptions.inline !== true) {
+    return Promise.resolve(
+      createImageObject(
+        input,
+        null,
+        getSyntheticMeta(imageOptions, meta),
+        imageOptions,
+        globalOptions,
+        loader,
+      ),
+    );
+  }
+  return new Promise(function(resolve, reject) {
+    const transformedImage = transformImage(image, meta, imageOptions);
+    transformedImage.toBuffer(function(err, buffer, info) {
+      if (err) {
+        reject(err);
+      } else {
+        const result = createImageObject(
+          input,
+          buffer,
+          info,
+          imageOptions,
+          globalOptions,
+          loader,
+        );
 
-  return (result) => {
-    const image = result.image;
-    const options = result.options;
-    const preset = result.preset;
-
-    // We have to use the callback form in order to get access to the info
-    // object unfortunately.
-    return new Promise(function(resolve, reject) {
-      image.toBuffer(function(err, buffer, info) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(data(buffer, info, options, preset));
+        if (imageOptions.inline !== true && globalOptions.emitFile !== false) {
+          loader.emitFile(result.name, buffer);
         }
-      });
+        resolve(result);
+      }
     });
-  };
+  });
 };
 
-const handle = (image, preset, name, presets, emit) => {
-  const wahoo = (options) => {
-    return emit({
-      preset: name,
-      options,
-      image: transform(image, normalize(options)),
-    });
-  };
-  if (name && !presets[name]) {
-    return [Promise.reject(`No such preset: ${preset}`)];
+const createImageOptions = (
+  meta,
+  outputOptions: OutputOptions,
+): Array<ImageOptions> => {
+  let newMeta = meta;
+  if (typeof outputOptions.meta === 'function') {
+    newMeta = outputOptions.meta(meta);
   }
-  const values = multiplex(_.assign({ }, presets[name] || {}, preset));
-  return _.map(values, wahoo);
+  const base = normalizeOutputOptions(outputOptions, newMeta);
+  const config = {};
+  allowedImageProperties.forEach((key) => {
+    if (typeof base[key] !== 'undefined') {
+      config[key] = base[key];
+    }
+  });
+  return multiplex(config);
 };
 
-const lolol = (image, extra, presets, globals, emit) => {
-  if (_.isArray(presets)) {
-    return Promise.all(_.flatMap(presets, (name) => {
-      return handle(image, extra, name, globals, emit);
-    }));
-  } else if (_.isObject(presets)) {
-    return Promise.all(_.flatMap(_.toPairs(presets), ([name, preset]) => {
-      return handle(image, _.assign({}, preset, extra), name, globals, emit);
-    }));
-  } else if (_.isString(presets)) {
-    return Promise.all(handle(image, extra, presets, globals, emit));
+const toArray = (x, defaultValue) => {
+  if (x === null || x === undefined) {
+    return defaultValue;
+  } else if (Array.isArray(x)) {
+    return x;
   }
-  throw new TypeError();
+  return [x];
 };
 
-const shouldEmit = (a, b) => {
-  const thing = {...a, ...b};
-  return typeof thing.emit === 'undefined' || thing.emit;
-};
-
-/* eslint import/no-commonjs: 0 */
+/* eslint metalab/import/no-commonjs: 0 */
 /* global module */
-module.exports = function(input) {
+module.exports = function(input: Buffer) {
   // This means that, for a given query string, the loader will only be
   // run once. No point in barfing out the same image over and over.
   this.cacheable();
 
-  const localQuery = loaderUtils.parseQuery(this.resourceQuery);
-  const globalQuery = loaderUtils.parseQuery(this.query);
-  const extra = _.omit(localQuery, ['preset', 'presets', 'emit']);
-  let assets;
-  const image = sharp(input);
+  const globalQuery = loaderUtils.getOptions(this);
+  const localQuery = this.resourceQuery
+    ? loaderUtils.parseQuery(this.resourceQuery)
+    : {};
+
+  const image: Image = sharp(input);
   const callback = this.async();
-  const e = shouldEmit(globalQuery, localQuery) ?
-    emit(this) : () => Promise.resolve();
+  const context =
+    globalQuery.context ||
+    this.rootContext ||
+    (this.options && this.options.context);
 
-  // We have three possible choices:
-  // - set of presets in `presets`
-  // - single preset in `preset`
-  // - single value
-  if (localQuery.presets) {
-    assets = lolol(image, extra, localQuery.presets, globalQuery.presets, e);
-  } else if (localQuery.preset) {
-    assets = lolol(image, extra, localQuery.preset, globalQuery.presets, e);
-  } else {
-    assets = Promise.all(
-      handle(image, localQuery, null, globalQuery.presets, e)
-    );
-  }
+  image
+    .metadata()
+    .then((meta) => {
+      const scaleMatch = /@([0-9]+)x/.exec(this.resourcePath);
+      const nextMeta: {
+        scale?: number,
+      } & typeof meta = {...meta};
+      if (scaleMatch) {
+        nextMeta.scale = parseInt(scaleMatch[1], 10);
+        nextMeta.width /= nextMeta.scale;
+        nextMeta.height /= nextMeta.scale;
+      }
+      const presetNames = Object.keys(globalQuery.presets);
+      const defaultOutputs = toArray(globalQuery.defaultOutputs, presetNames);
+      const outputs = toArray(localQuery.outputs, defaultOutputs);
+      const globalOptions = {emitFile: globalQuery.emitFile, context};
 
-  assets.then(function(assets) {
-    return `module.exports = ${JSON.stringify(assets)};`;
-  }).then((result) => callback(null, result), callback);
+      const requirePreset = (name) => {
+        if (name in globalQuery.presets) {
+          return {
+            name: globalQuery.name,
+            meta: globalQuery.meta,
+            ...globalQuery.presets[name],
+            preset: name,
+          };
+        }
+        return null;
+      };
+
+      const optionsList: Array<ImageOptions> = outputs.reduce(
+        (prev: Array<ImageOptions>, output: string | OutputOptions) => {
+          if (typeof output === 'string') {
+            const preset = requirePreset(output);
+            if (preset) {
+              return [...prev, ...createImageOptions(nextMeta, preset)];
+            }
+            return prev;
+          } else if (typeof output === 'object') {
+            const preset =
+              typeof output.preset === 'string'
+                ? requirePreset(output.preset)
+                : null;
+            return [
+              ...prev,
+              ...createImageOptions(nextMeta, {
+                ...preset,
+                ...output,
+              }),
+            ];
+          }
+          return prev;
+        },
+        [],
+      );
+      const assets = optionsList.map((imageOptions) => {
+        return processImage(
+          input,
+          image,
+          nextMeta,
+          imageOptions,
+          globalOptions,
+          this,
+        );
+      });
+      return Promise.all(assets).then(function(assets) {
+        return `module.exports = ${serialize(assets)};`;
+      });
+    })
+    .then((result) => {
+      callback(null, result);
+    }, callback);
 };
+
+//     webpack.emitWarning(data)
+//    webpack.emitError(data)
+// https://github.com/callstack/haul/blob/master/src/loaders/assetLoader.js
 
 // Force buffers since sharp doesn't want strings.
 module.exports.raw = true;

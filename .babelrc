@@ -1,5 +1,14 @@
 {
   "presets": [
-    "metalab"
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "node": 4
+        },
+        "shippedProposals": true
+      }
+    ],
+    "@babel/preset-flow"
   ]
 }

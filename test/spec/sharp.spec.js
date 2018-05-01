@@ -1,29 +1,7 @@
+import vm from 'vm';
 import _webpack from 'webpack';
 import path from 'path';
 import MemoryFileSystem from 'memory-fs';
-import {expect} from 'chai';
-
-const query = {
-  name: '[name].[hash:8].[ext]',
-  presets: {
-    thumbnail: {
-      format: ['webp', 'png', 'jpeg'],
-      density: [1, 2, 3],
-      width: 200,
-      height: 200,
-      quality: 60,
-    },
-    prefetch: {
-      format: 'jpeg',
-      mode: 'cover',
-      blur: 100,
-      quality: 30,
-      inline: true,
-      width: 50,
-      height: 50,
-    },
-  },
-};
 
 const config = (query, entry = 'index.js', extra) => {
   return {
@@ -33,13 +11,18 @@ const config = (query, entry = 'index.js', extra) => {
       path: path.join(__dirname, 'dist'),
       publicPath: '/foo',
       filename: 'bundle.js',
+      libraryTarget: 'commonjs2',
     },
     module: {
-      loaders: [{
-        test: /\.(gif|jpe?g|png|svg|tiff)(\?.*)?$/,
-        loader: path.join(__dirname, '..', '..', 'src', 'sharp.js'),
-        query,
-      }],
+      rules: [
+        {
+          test: /\.(gif|jpe?g|png|svg|tiff)(\?.*)?$/,
+          use: {
+            loader: path.join(__dirname, '..', '..', 'src', 'sharp.js'),
+            query,
+          },
+        },
+      ],
     },
     ...extra,
   };
@@ -51,25 +34,117 @@ const webpack = (options, inst, extra) => {
   compiler.outputFileSystem = new MemoryFileSystem();
   return new Promise((resolve) => {
     compiler.run((err, _stats) => {
-      expect(err).to.be.null;
+      expect(err).toBe(null);
+      if (_stats.hasErrors()) {
+        // eslint-disable-next-line
+        console.log(_stats.toString());
+        throw new Error('webpack error occured');
+      }
       const stats = _stats.toJson();
       const files = {};
+      let code = '';
       stats.assets.forEach((asset) => {
         files[asset.name] = compiler.outputFileSystem.readFileSync(
-          path.join(configuration.output.path, asset.name)
+          path.join(configuration.output.path, asset.name),
         );
+        if (asset.name === 'bundle.js') {
+          code = files[asset.name].toString('utf8');
+        }
       });
-      resolve({stats, files});
+      const sandbox = vm.createContext({});
+      sandbox.global = {};
+      sandbox.module = {exports: {}};
+      vm.runInContext(code, sandbox);
+
+      resolve({stats, files, exports: sandbox.module.exports});
     });
   });
 };
 
+jest.setTimeout(25000);
+
 describe('sharp', () => {
-  it('should do things', () => (
-    webpack(query).then(({stats}) => {
-      expect(stats).to.not.be.null;
-      expect(stats).to.have.property('assets')
-        .to.have.length(29);
-    })
-  ));
+  it('should do things', () => {
+    const query = {
+      defaultOutputs: ['thumbnail', 'prefetch'],
+      presets: {
+        thumbnail: {
+          name: '[name]@[scale]x.[hash:8].[ext]',
+          meta: (m) => {
+            return {...m, scale: 3};
+          },
+          format: ['webp', 'png', {id: 'jpeg', quality: 60}],
+          scale: [1, 2, 3],
+        },
+        prefetch: {
+          name: '[name].[hash:8].[ext]',
+          format: 'jpeg',
+          mode: 'cover',
+          blur: 100,
+          quality: 30,
+          inline: true,
+          width: 50,
+          height: 50,
+        },
+      },
+    };
+    return webpack(query).then(({stats}) => {
+      expect(stats).not.toBe(null);
+      expect(stats.assets.length).toBe(29);
+    });
+  });
+  it('should isomorphic 1', () => {
+    const query = {
+      emitFile: false,
+      presets: {
+        thumbnail: {
+          format: ['webp'],
+        },
+        prefetch: {
+          format: 'jpeg',
+          mode: 'cover',
+          blur: 100,
+          quality: 30,
+          inline: true,
+          width: 50,
+          height: 50,
+        },
+      },
+    };
+    return Promise.all([
+      webpack(query, 'simple.js'),
+      webpack({emitFile: false, ...query}, 'simple.js'),
+    ]).then(([{exports: withEmit}, {exports: withoutEmit}]) => {
+      const aList = withEmit.a.map(({name}) => name).sort();
+      const bList = withoutEmit.a.map(({name}) => name).sort();
+      expect(aList).toEqual(bList);
+    });
+  });
+  it('should isomorphic 2', () => {
+    const query = {
+      emitFile: 'synthetic',
+      presets: {
+        thumbnail: {
+          format: ['webp'],
+        },
+        prefetch: {
+          format: 'jpeg',
+          mode: 'cover',
+          blur: 100,
+          quality: 30,
+          inline: true,
+          width: 50,
+          height: 50,
+        },
+      },
+    };
+    return Promise.all([
+      webpack(query, 'simple.js'),
+      webpack({emitFile: false, ...query}, 'simple.js'),
+    ]).then(([{exports: withEmit}, {exports: withoutEmit}]) => {
+      const aList = withEmit.a.map(({name}) => name).sort();
+      const bList = withoutEmit.a.map(({name}) => name).sort();
+      expect(aList).toEqual(bList);
+    });
+  });
 });
