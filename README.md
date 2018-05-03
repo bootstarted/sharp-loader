@@ -29,6 +29,7 @@ Setup presets in your loader:
         loader: 'sharp-loader',
         query: {
           name: '[name].[hash:8].[ext]',
+          cacheDirectory: true,
           presets: {
             // Preset 1
             thumbnail: {

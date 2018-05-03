@@ -2,31 +2,7 @@
 import loaderUtils from 'loader-utils';
 
 import type {GlobalOptions} from '../types';
-
-const splatOptions = (v: *): string => {
-  switch (typeof v) {
-    case 'object':
-      if (!v) {
-        return '!null!';
-      }
-      if (Array.isArray(v)) {
-        return v.map(splatOptions).join('|');
-      }
-      return Object.keys(v)
-        .sort()
-        .map((k) => {
-          return k + splatOptions(v[k]);
-        })
-        .join('|');
-    case 'string':
-    case 'boolean':
-    case 'number':
-    case 'function':
-      return v.toString();
-    default:
-      return '';
-  }
-};
+import hashOptions from './hashOptions';
 
 /**
  * Generate the appropriate extension for a `sharp` format.
@@ -66,7 +42,7 @@ const createName = (
   const resourcePath = loader.resourcePath
     .replace(/@([0-9]+)x\./, '.')
     .replace(/\.[^.]+$/, extension(info.format));
-  const content = Buffer.concat([new Buffer(splatOptions(params)), image]);
+  const content = Buffer.concat([new Buffer(hashOptions(params)), image]);
   return loaderUtils.interpolateName(
     {
       resourcePath,
