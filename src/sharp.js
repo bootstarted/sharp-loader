@@ -2,11 +2,15 @@
 import sharp from 'sharp';
 import loaderUtils from 'loader-utils';
 import product from 'cartesian-product';
+import findCacheDir from 'find-cache-dir';
+import cacache from 'cacache';
 
 import serialize from './internal/serialize';
 import createImageObject from './internal/createImageObject';
 import transformImage from './internal/transformImage';
 import getSyntheticMeta from './internal/getSyntheticMeta';
+import getImageMetadata from './internal/getImageMetadata';
+import hashOptions from './internal/hashOptions';
 
 import type {Image} from 'sharp';
 import type {
@@ -108,27 +112,71 @@ const processImage = (
       ),
     );
   }
-  return new Promise(function(resolve, reject) {
-    const transformedImage = transformImage(image, meta, imageOptions);
-    transformedImage.toBuffer(function(err, buffer, info) {
-      if (err) {
-        reject(err);
-      } else {
-        const result = createImageObject(
-          input,
-          buffer,
-          info,
-          imageOptions,
-          globalOptions,
-          loader,
-        );
 
-        if (imageOptions.inline !== true && globalOptions.emitFile !== false) {
-          loader.emitFile(result.name, buffer);
+  const imageCacheKey = loader.resourcePath + hashOptions(imageOptions);
+  const metaCacheKey = `meta${imageCacheKey}`;
+  const bufferCacheKey = `buffer${imageCacheKey}`;
+  const cachedResult =
+    typeof globalOptions.cacheDir === 'string'
+      ? Promise.all([
+          cacache
+            .get(globalOptions.cacheDir, bufferCacheKey)
+            .then(({data}) => {
+              return data;
+            })
+            .catch(() => Promise.resolve(null)),
+          cacache
+            .get(globalOptions.cacheDir, metaCacheKey)
+            .then(({data}) => {
+              return JSON.parse(data.toString('utf8'));
+            })
+            .catch(() => Promise.resolve(null)),
+        ])
+      : Promise.resolve([null, null]);
+
+  const sharpResult = cachedResult.then(([buffer, info]) => {
+    if (buffer && info) {
+      return {buffer, info};
+    }
+    const generatedImage = new Promise(function(resolve, reject) {
+      const transformedImage = transformImage(image, meta, imageOptions);
+      transformedImage.toBuffer(function(err, buffer, info) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({buffer, info});
         }
-        resolve(result);
-      }
+      });
     });
+    return generatedImage.then((result) => {
+      if (typeof globalOptions.cacheDir === 'string') {
+        return Promise.all([
+          cacache.put(globalOptions.cacheDir, bufferCacheKey, result.buffer),
+          cacache.put(
+            globalOptions.cacheDir,
+            metaCacheKey,
+            JSON.stringify(result.info),
+          ),
+        ]).then(() => result);
+      }
+      return result;
+    });
+  });
+
+  return sharpResult.then(({buffer, info}) => {
+    const result = createImageObject(
+      input,
+      buffer,
+      info,
+      imageOptions,
+      globalOptions,
+      loader,
+    );
+
+    if (imageOptions.inline !== true && globalOptions.emitFile !== false) {
+      loader.emitFile(result.name, buffer);
+    }
+    return result;
   });
 };
 
@@ -185,8 +233,16 @@ module.exports = function(input: Buffer) {
     this.rootContext ||
     (this.options && this.options.context);
 
-  image
-    .metadata()
+  const cacheDir =
+    globalQuery.cacheDirectory === true
+      ? findCacheDir({
+          name: 'sharp-loader',
+        })
+      : null;
+
+  const globalOptions = {emitFile: globalQuery.emitFile, context, cacheDir};
+
+  getImageMetadata(image, this.resourcePath, globalOptions)
     .then((meta) => {
       const scaleMatch = /@([0-9]+)x/.exec(this.resourcePath);
       const nextMeta: {
@@ -200,7 +256,6 @@ module.exports = function(input: Buffer) {
       const presetNames = Object.keys(globalQuery.presets);
       const defaultOutputs = toArray(globalQuery.defaultOutputs, presetNames);
       const outputs = toArray(localQuery.outputs, defaultOutputs);
-      const globalOptions = {emitFile: globalQuery.emitFile, context};
 
       const requirePreset = (name) => {
         if (name in globalQuery.presets) {

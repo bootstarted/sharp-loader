@@ -67,6 +67,7 @@ describe('sharp', () => {
   it('should do things', () => {
     const query = {
       defaultOutputs: ['thumbnail', 'prefetch'],
+      cache: false,
       presets: {
         thumbnail: {
           name: '[name]@[scale]x.[hash:8].[ext]',
@@ -96,6 +97,7 @@ describe('sharp', () => {
   it('should isomorphic 1', () => {
     const query = {
       emitFile: false,
+      cache: false,
       presets: {
         thumbnail: {
           format: ['webp'],
@@ -123,6 +125,7 @@ describe('sharp', () => {
   it('should isomorphic 2', () => {
     const query = {
       emitFile: 'synthetic',
+      cache: false,
       presets: {
         thumbnail: {
           format: ['webp'],
@@ -145,6 +148,24 @@ describe('sharp', () => {
       const aList = withEmit.a.map(({name}) => name).sort();
       const bList = withoutEmit.a.map(({name}) => name).sort();
       expect(aList).toEqual(bList);
+    });
+  });
+  it('should do the cache', () => {
+    const query = {
+      defaultOutputs: ['thumbnail'],
+      cacheDirectory: true,
+      presets: {
+        thumbnail: {
+          format: ['webp'],
+        },
+      },
+    };
+    return webpack(query, 'simple.js').then(({stats}) => {
+      expect(stats).not.toBe(null);
+      return webpack(query, 'simple.js').then(({stats}) => {
+        expect(stats).not.toBe(null);
+        // TODO make this better.
+      });
     });
   });
 });

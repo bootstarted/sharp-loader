@@ -44,6 +44,7 @@ export type OutputOptions = $ObjMap<ImageOptions, ArrayLike<*>> & {
 };
 
 export type GlobalOptions = {
-  emitFile?: boolean | 'synthetic',
+  emitFile: boolean | 'synthetic',
   context: *,
+  cacheDir: ?string,
 };
