@@ -10,7 +10,7 @@ export type FormatOptions = {
   [key: string]: string | number | boolean,
 };
 
-export type Format = string | ({id: string} & FormatOptions);
+export type Format = string | ({format: string} & FormatOptions);
 
 export type ImageOptions = {|
   name?: string,

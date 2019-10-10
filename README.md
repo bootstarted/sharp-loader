@@ -122,7 +122,7 @@ You can also avoid any processing and just emit the expected metadata:
         if (meta.hasAlpha) {
           return ['webp', 'png'];
         }
-        return ['webp', {id: 'jpeg', quality: 70}];
+        return ['webp', {format: 'jpeg', quality: 70}];
       },
       scale: (meta) => {
         // If the image has no intrinsic scaling just ignore it.
@@ -141,7 +141,7 @@ You can also avoid any processing and just emit the expected metadata:
         if (meta.hasAlpha) {
           return 'png';
         }
-        return {id: 'jpeg', quality: 40};
+        return {format: 'jpeg', quality: 40};
       },
       blur: 100,
       inline: true,
