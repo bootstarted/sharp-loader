@@ -2,13 +2,19 @@
 
 import type {Format, FormatOptions} from '../types';
 
-function parseFormat(format: Format): [string, FormatOptions] {
-  if (typeof format === 'string') {
-    return [format, {}];
+function parseFormat(rawFormat: Format): [string, FormatOptions] {
+  if (typeof rawFormat === 'string') {
+    return [rawFormat, {}];
   }
 
-  const {id, ...options} = format;
-  return [(id: string), options];
+  const {
+    id,
+    // Support deprecated `id` property as alias for `format`
+    format = (id: any), // flowlint-line unclear-type: off
+    ...options
+  } = rawFormat;
+
+  return [format, options];
 }
 
 export default parseFormat;
