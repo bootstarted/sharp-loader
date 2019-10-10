@@ -11,22 +11,22 @@ import serialize, {Serializable} from './serialize';
 const createImageObject = (
   input: Buffer,
   image: ?Buffer,
-  info: $Supertype<Meta>,
+  meta: $Supertype<Meta>,
   options: ImageOptions,
   globalOptions: GlobalOptions,
   loader: *,
 ): ImageObject => {
-  const {format: rawFormat, ...rest} = options;
+  const {format: rawFormat = meta.format, ...rest} = options;
   const [format, formatOptions] = parseFormat(rawFormat);
 
-  const n = createName(input, info, format, options, globalOptions, loader);
+  const n = createName(input, meta, format, options, globalOptions, loader);
   const type = mime.getType(n);
   const result = {
     ...rest,
     format,
     formatOptions,
-    width: info.width,
-    height: info.height,
+    width: meta.width,
+    height: meta.height,
     type,
     name: n,
     url: null,

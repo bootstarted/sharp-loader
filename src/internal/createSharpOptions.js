@@ -15,7 +15,9 @@ import parseFormat from './parseFormat';
 const createSharpOptions = (options: ImageOptions, meta: *): SharpOptions => {
   const result = {};
 
-  const [format, formatOptions] = parseFormat(options.format);
+  const {format: rawFormat = meta.format} = options;
+
+  const [format, formatOptions] = parseFormat(rawFormat);
   result.toFormat = [sharp.format[format], formatOptions];
 
   // Sizing

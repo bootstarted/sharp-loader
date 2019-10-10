@@ -14,7 +14,7 @@ export type Format = string | ({id: string} & FormatOptions);
 
 export type ImageOptions = {|
   name?: string,
-  format: Format,
+  format?: Format,
   width?: number,
   height?: number,
   scale?: number,
