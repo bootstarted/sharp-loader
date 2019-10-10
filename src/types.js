@@ -6,9 +6,15 @@ export type SharpMeta = {|
   format: string,
 |};
 
+export type FormatOptions = {
+  [key: string]: string | number | boolean,
+};
+
+export type Format = string | ({id: string} & FormatOptions);
+
 export type ImageOptions = {|
   name?: string,
-  format?: string,
+  format: Format,
   width?: number,
   height?: number,
   scale?: number,
@@ -21,6 +27,7 @@ export type ImageOptions = {|
 export type ImageObject = {
   name: string,
   format: string,
+  formatOptions: FormatOptions,
   width: number,
   height: number,
   preset?: string,
@@ -31,7 +38,7 @@ export type ImageObject = {
 export type SharpOptions = {
   max?: boolean,
   min?: boolean,
-  toFormat?: string,
+  toFormat?: string | [string, FormatOptions],
   blur?: number,
   resize?: [?number, ?number],
   crop?: *,
