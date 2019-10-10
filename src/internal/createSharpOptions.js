@@ -3,6 +3,8 @@ import sharp from 'sharp';
 
 import type {ImageOptions, SharpOptions} from '../types';
 
+import parseFormat from './parseFormat';
+
 /**
  * Take some configuration options and transform them into a format that
  * `transform` is capable of using.
@@ -12,9 +14,11 @@ import type {ImageOptions, SharpOptions} from '../types';
  */
 const createSharpOptions = (options: ImageOptions, meta: *): SharpOptions => {
   const result = {};
-  if (typeof options.format === 'string') {
-    result.toFormat = options.format;
-  }
+
+  const {format: rawFormat = meta.format} = options;
+
+  const [format, formatOptions] = parseFormat(rawFormat);
+  result.toFormat = [sharp.format[format], formatOptions];
 
   // Sizing
   if (typeof options.width === 'number' || typeof options.height === 'number') {

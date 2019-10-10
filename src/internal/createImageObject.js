@@ -1,25 +1,32 @@
 // @flow
-import createName from './createName';
 import mime from 'mime';
-import serialize, {Serializable} from './serialize';
 
 import type {Meta} from 'sharp';
 import type {GlobalOptions, ImageObject, ImageOptions} from '../types';
 
+import createName from './createName';
+import parseFormat from './parseFormat';
+import serialize, {Serializable} from './serialize';
+
 const createImageObject = (
   input: Buffer,
   image: ?Buffer,
-  info: $Supertype<Meta>,
+  meta: $Supertype<Meta>,
   options: ImageOptions,
   globalOptions: GlobalOptions,
   loader: *,
 ): ImageObject => {
-  const n = createName(input, info, options, globalOptions, loader);
+  const {format: rawFormat = meta.format, ...rest} = options;
+  const [format, formatOptions] = parseFormat(rawFormat);
+
+  const n = createName(input, meta, format, options, globalOptions, loader);
   const type = mime.getType(n);
   const result = {
-    ...options,
-    width: info.width,
-    height: info.height,
+    ...rest,
+    format,
+    formatOptions,
+    width: meta.width,
+    height: meta.height,
     type,
     name: n,
     url: null,

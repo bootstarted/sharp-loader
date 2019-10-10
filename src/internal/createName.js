@@ -10,16 +10,17 @@ import hashOptions from './hashOptions';
  * @returns {String} Extension.
  */
 const extension = (type: string): string => {
-  return {
-    webp: '.webp',
-    jpeg: '.jpg',
-    png: '.png',
-  }[type];
+  return (
+    {
+      jpeg: '.jpg',
+    }[type] || `.${type}`
+  );
 };
 
 const createName = (
   image: Buffer,
   info: *,
+  format: string,
   params: *,
   globalOptions: GlobalOptions,
   loader: *,
@@ -39,9 +40,11 @@ const createName = (
     }
     return str;
   });
+
   const resourcePath = loader.resourcePath
     .replace(/@([0-9]+)x\./, '.')
-    .replace(/\.[^.]+$/, extension(info.format));
+    .replace(/\.[^.]+$/, extension(format));
+
   const content = Buffer.concat([new Buffer(hashOptions(params)), image]);
   return loaderUtils.interpolateName(
     {
