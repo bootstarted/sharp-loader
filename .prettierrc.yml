@@ -1,4 +1,3 @@
-parser: flow
 semi: true
 singleQuote: true
 trailingComma: all

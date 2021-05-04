@@ -1,6 +1,14 @@
 extends:
-  - metalab
-env:
-  node: true
+  - standard-with-typescript
 rules:
-  complexity: 0
+  '@typescript-eslint/semi': off
+  semi: off
+  comma-dangle: off
+  object-curly-spacing: off
+  '@typescript-eslint/space-before-function-paren': off
+  space-before-function-paren: off
+  '@typescript-eslint/member-delimiter-style': off
+  '@typescript-eslint/indent': off
+  '@typescript-eslint/array-type': off
+parserOptions:
+  project: ./tsconfig.json
