@@ -94,15 +94,6 @@ You can disable emitting the image files with:
 }
 ```
 
-You can also avoid any processing and just emit the expected metadata:
-
-```js
-{
-  emitFile: 'synthetic'
-}
-```
-
-
 ### Complex Example
 
 ```js

@@ -7,6 +7,7 @@ const config = (query, entry = 'index.js', extra) => {
   return {
     entry: path.join(__dirname, '..', '..', 'example', entry),
     context: path.join(__dirname, '..', '..', 'example'),
+    mode: 'development',
     output: {
       path: path.join(__dirname, 'dist'),
       publicPath: '/foo',
@@ -18,7 +19,7 @@ const config = (query, entry = 'index.js', extra) => {
         {
           test: /\.(gif|jpe?g|png|svg|tiff)(\?.*)?$/,
           use: {
-            loader: path.join(__dirname, '..', '..', 'src', 'sharp.js'),
+            loader: path.join(__dirname, '..', '..', 'src', 'sharp.ts'),
             query,
           },
         },
@@ -97,34 +98,6 @@ describe('sharp', () => {
   it('should isomorphic 1', () => {
     const query = {
       emitFile: false,
-      cache: false,
-      presets: {
-        thumbnail: {
-          format: ['webp'],
-        },
-        prefetch: {
-          format: 'jpeg',
-          mode: 'cover',
-          blur: 100,
-          quality: 30,
-          inline: true,
-          width: 50,
-          height: 50,
-        },
-      },
-    };
-    return Promise.all([
-      webpack(query, 'simple.js'),
-      webpack({emitFile: false, ...query}, 'simple.js'),
-    ]).then(([{exports: withEmit}, {exports: withoutEmit}]) => {
-      const aList = withEmit.a.map(({name}) => name).sort();
-      const bList = withoutEmit.a.map(({name}) => name).sort();
-      expect(aList).toEqual(bList);
-    });
-  });
-  it('should isomorphic 2', () => {
-    const query = {
-      emitFile: 'synthetic',
       cache: false,
       presets: {
         thumbnail: {
